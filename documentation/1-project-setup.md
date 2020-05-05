@@ -4,13 +4,68 @@ Create the Azure resources and set up Git to begin developing Custom Speech mode
 
 ### Table of Contents
 
+* [Use this Template](#Use-this-Template)
+* [Clone with Git Large File Storage](#Clone-with-Git-Large-File-Storage)
 * [Create the Resource Group and Resources](#Create-the-Resource-Group-and-Resources)
 * [Create the Speech Project](#Create-the-Speech-Project)
 * [Create the Service Principal](#Create-the-Service-Principal)
 * [Validate GitHub Secrets](#Validate-GitHub-Secrets)
-* [Install Git Large File Storage](#Install-Git-Large-File-Storage)
 * [Protect the Master Branch](#Protect-the-Master-Branch)
 * [Next Steps](#Next-Steps)
+
+## Use this Template
+
+Log in to GitHub, or [create an account](https://github.com/join), then [generate a copy of this template repository](https://github.com/KatieProchilo/CustomSpeechDevOpsSample/generate) to hold the code and the GitHub Actions pipelines:
+
+1. Enter a name for the repository where prompted.
+2. Leave **Include all branches** unchecked. You only need to copy the master branch of this repository.
+3. Click **Create repository from template** to create your copy.
+
+Use this repository to walk through this guide and for your own experimentation.
+
+## Clone with Git Large File Storage
+
+[Git Large File Storage](https://git-lfs.github.com/) (Git LFS) optimizes operations for large files to occur only when the files are interacted with specifically. Git can be used in the same way it's always been used while Git LFS manages data from the `testing` and `training` folders in the background. Pulling and checking out operate quickly, even with large files.
+
+The template repository is already set up for Git LFS to manage the testing and training data, which can be seen in `.gitattributes`, but there is setup beyond simply cloning the repository in order to download the proper files.
+
+[Download the Git LFS command line extension](https://github.com/git-lfs/git-lfs/releases/download/v2.10.0/git-lfs-windows-v2.10.0.exe) from the Git LFS homepage and [see here for OS-specific guidance](https://github.com/git-lfs/git-lfs/wiki/Installation). Then [clone the repository with SSH](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository):
+
+```bash
+git clone <<SSH_REPOSITORY_URL>>
+```
+
+Change into your repository's directory and install Git LFS. Track the testing and training data, and add them as Git LFS objects:
+
+```bash
+git lfs install
+git lfs track "testing/audio-and-trans.zip" "training/audio-and-trans.zip" "training/pronunciation.txt" "training/related-text.txt"
+git add .gitattributes
+git commit -m "Track large files with LFS."
+```
+
+The testing and training data is currently stored as Git objects and needs to be converted to Git LFS objects. First, you need to remove the testing and training data Git objects:
+
+```bash
+git rm --cached "testing/audio-and-trans.zip" "training/audio-and-trans.zip" "training/pronunciation.txt" "training/related-text.txt"
+git add "testing/audio-and-trans.zip" "training/audio-and-trans.zip" "training/pronunciation.txt" "training/related-text.txt"
+git commit -m "Convert large files from last commit to LFS."
+git push
+git lfs ls-files
+```
+
+Running `git lfs ls-files` in the above command should output the four testing and training files that Git LFS is successfully managing. For example:
+
+```bash
+7aeb3069fa - testing/audio-and-trans.zip
+3a7ddef774 - training/audio-and-trans.zip
+cd881b1d34 - training/pronunciation.txt
+4911fe118b - training/related-text.txt
+```
+
+If needed, [purchase more large file storage](https://help.github.com/en/github/setting-up-and-managing-billing-and-payments-on-github/upgrading-git-large-file-storage) through GitHub. There are many ways to version and manage the testing and training data, but Git LFS was chosen for its simplicity. It doesn't require additional tooling, but at the cost of paying more for storage than using a solution with Azure Blob Storage for example. With the amount of data typically used for Custom Speech models, this will probably not be a very high cost, but it is possible to [customize this solution to use different storage](4-advanced-customization.md#Configure-Different-Data-Storage) options if you choose.
+
+Now, Custom Speech models can be quickly developed and versioned with commits, tags, and releases in the same way that the rest of the repository is versioned.
 
 ## Create the Resource Group and Resources
 
@@ -41,7 +96,7 @@ Select the Speech Resource that was created in Project Setup, and then click the
 
 ![Speech Studio Speech Subscription Key](../images/SpeechStudioSubscriptionKey.png)
 
-[Create a Speech project](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/how-to-custom-speech#how-to-create-a-project) under this Speech Resource. [Create a GitHub Secret](https://help.github.com/en/actions/configuring-and-managing-workflows/creating-and-storing-encrypted-secrets#creating-encrypted-secrets) called `SPEECH_PROJECT_NAME` and set it to the name of the project you created.
+Click **Go to Studio** and [create a Speech project](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/how-to-custom-speech#how-to-create-a-project) under this Speech Resource. [Create a GitHub Secret](https://help.github.com/en/actions/configuring-and-managing-workflows/creating-and-storing-encrypted-secrets#creating-encrypted-secrets) called `SPEECH_PROJECT_NAME` and set it to the name of the project you created.
 
 ## Create the Service Principal
 
@@ -65,7 +120,7 @@ If you have more than one subscription and the incorrect subscription is selecte
 az account set -s <<NAME_OR_ID_OF_SUBSCRIPTION>>
 ```
 
-Using the Resource Group name from before, substitute the appropriate values and run the command to create the service principal. Its name must be unique across Azure:
+Set `RESOURCE_GROUP_NAME` to the name of the Resource Group from the Deploy to Azure task. Substitute the `SUBSCRIPTION_ID` as well. Come up with a `SERVICE_PRINCIPAL_NAME` to run the command to create the service principal, which must be unique across Azure. If you see output from this command reporting that it has found an existing resource, run this command again and use a different name:
 
 ```bash
 az ad sp create-for-rbac --name <<SERVICE_PRINCIPAL_NAME>> --role "Storage Blob Data Contributor" --scopes /subscriptions/<<SUBSCRIPTION_ID>>/resourceGroups/<<RESOURCE_GROUP_NAME>> --sdk-auth
@@ -95,36 +150,6 @@ GitHub Secrets serve as parameters to the workflow, while also hiding secret val
 Ensure each of the following secrets have been set:
 
 ![GitHub Secrets](../images/GitHubSecrets.png)
-
-## Install Git Large File Storage
-
-Custom Speech uses .wav audio files for both testing and training models. Storing these files in a Git repository is not common practice because simple actions like pulling or checking out are expensive. However, the testing and training data needs to be versioned and should be stored in some way that enables versioning. There are many possible solutions to this versioning problem, and one is [Git Large File Storage](https://git-lfs.github.com/).
-
-Git LFS was chosen for this solution because the training and testing data can be stored in the same repository that the model is developed, making versioning and traceability easy to handle. Also, it doesn't require additional tooling; Git can be used in the same way it's always been used. Operations for large files are optimized to to occur only when the files are interacted with specifically.
-
-Navigate to the root of the repository you cloned and install Git LFS:
-
-```bash
-git lfs install
-```
-
-Git LFS should manage all the testing and training data. Additional files can be configured at any time, but to manage the data as it is currently set up:
-
-```bash
-git lfs track "testing/**" "training/**"
-```
-
-Now add `.gitattributes` as a tracked file and push the changes to your repository:
-
-```bash
-git add .gitattributes
-git commit -m "Set up Git LFS."
-git push
-```
-
-If needed, [purchase more large file storage](https://help.github.com/en/github/setting-up-and-managing-billing-and-payments-on-github/upgrading-git-large-file-storage) through GitHub.
-
-Now, Custom Speech models can be quickly developed with traceability between the models created, the data that trained each model, and the data each model was tested on.
 
 ## Protect the Master Branch
 
