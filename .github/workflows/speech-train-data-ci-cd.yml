@@ -84,10 +84,14 @@ jobs:
     needs: setup
 
     steps:
-      - uses: actions/checkout@master
+      - name: Checkout and download LFS dependencies
+        uses: actions/checkout@v2
         with:
           # Indicates all history.
           fetch-depth: "0"
+          lfs: true
+      - name: Checkout LFS objects
+        run: git lfs checkout
 
       - name: Set environment variables
         run: |
@@ -280,7 +284,12 @@ jobs:
     needs: [setup, train_data_update]
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout and download LFS dependencies
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+      - name: Checkout LFS objects
+        run: git lfs checkout
 
       - name: Fetch all history for all tags and branches - for GitVersion
         if: env.IS_PRIVATE_REPOSITORY == 'false'
