@@ -73,10 +73,14 @@ jobs:
     needs: setup
 
     steps:
-      - uses: actions/checkout@master
+      - name: Checkout and download LFS dependencies
+        uses: actions/checkout@v2
         with:
           # Indicates all history.
           fetch-depth: "0"
+          lfs: true
+      - name: Checkout LFS objects
+        run: git lfs checkout
 
       - name: Set environment variables
         run: |
