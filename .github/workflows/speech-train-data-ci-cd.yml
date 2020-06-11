@@ -13,9 +13,9 @@ on:
       - master
     # The push must include updates to testing or training data.
     paths:
-      - "training/audio-and-trans.zip"
-      - "training/pronunciation.txt"
-      - "training/related-text.txt"
+      - "training/audio-and-trans.zip1"
+      - "training/pronunciation.txt1"
+      - "training/related-text.txt1"
 
 env:
   # If your repository is private, set this to `true`.

@@ -7,7 +7,7 @@
 #
 ###############################################################################
 
-name: SpeechTrainDataCICD
+name: Andy
 
 on:
   push:
@@ -62,9 +62,6 @@ jobs:
   release:
     name: Release improved endpoint
     runs-on: ubuntu-latest
-    # Execute when setup, test_data_update, and train_data_update finish
-    # executing and pass.
-    needs: [setup, train_data_update]
 
     steps:
       - name: Checkout the repository
